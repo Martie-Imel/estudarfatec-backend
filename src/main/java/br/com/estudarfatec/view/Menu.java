@@ -2,6 +2,7 @@ package br.com.estudarfatec.view;
 
 import br.com.estudarfatec.model.Tarefa;
 import br.com.estudarfatec.repository.TarefaRepositoryMemoria;
+import br.com.estudarfatec.repository.DisciplinaRepositoryMemoria;
 import br.com.estudarfatec.service.TarefaService;
 
 import java.util.List;
