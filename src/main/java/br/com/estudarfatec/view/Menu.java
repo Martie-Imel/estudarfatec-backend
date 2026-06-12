@@ -23,8 +23,10 @@ import java.util.Scanner;
 public class Menu {
 
     // Instancia as camadas diretamente para demonstração sem Spring
-    private static final TarefaService tarefaService =
-            new TarefaService(new TarefaRepositoryMemoria());
+    private static final TarefaService tarefaService = new TarefaService(
+        new TarefaRepositoryMemoria(),
+        new DisciplinaRepositoryMemoria()
+    );
 
     private static final Scanner scanner = new Scanner(System.in);
 
