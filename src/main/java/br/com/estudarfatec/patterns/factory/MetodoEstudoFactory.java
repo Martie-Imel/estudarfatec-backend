@@ -2,53 +2,50 @@ package br.com.estudarfatec.patterns.factory;
 
 import br.com.estudarfatec.patterns.strategy.MetodoEstudo;
 import br.com.estudarfatec.patterns.strategy.MetodoPomodoro;
+import br.com.estudarfatec.patterns.strategy.MetodoPomodoroCustomizado;
 import br.com.estudarfatec.patterns.strategy.MetodoRevisao;
 
 /**
  * ENTREGA 7 - Padrão Factory
- *
- * Fábrica responsável por criar instâncias de MetodoEstudo.
- * O Controller não usa "new" diretamente — delega à Factory.
- *
- * Benefícios:
- * - Centraliza a lógica de criação em um único lugar
- * - Adicionar um novo método de estudo = adicionar um case aqui
- * - Controller permanece enxuto e sem lógica de criação
- *
- * Padrão: Factory Method
+ * Atualizado: suporte a pomodoro_custom com parâmetros de tempo.
  */
 public class MetodoEstudoFactory {
 
-    // Constantes públicas para evitar strings mágicas no código
-    public static final String POMODORO = "pomodoro";
-    public static final String REVISAO  = "revisao";
+    public static final String POMODORO        = "pomodoro";
+    public static final String REVISAO         = "revisao";
+    public static final String POMODORO_CUSTOM = "pomodoro_custom";
 
     /**
-     * Cria e retorna a implementação de MetodoEstudo correspondente ao tipo.
+     * Cria a estratégia de estudo pelo tipo.
      *
-     * @param tipo identificador do método ("pomodoro" ou "revisao")
-     * @return instância concreta de MetodoEstudo
-     * @throws IllegalArgumentException se o tipo for desconhecido
+     * Para pomodoro_custom, forneça minutosFoco e minutosPausa.
+     * Para os demais tipos, esses parâmetros são ignorados.
      */
-    public static MetodoEstudo criar(String tipo) {
-        if (tipo == null || tipo.isBlank()) {
-            throw new IllegalArgumentException(
-                    "Tipo de método de estudo não pode ser vazio.");
-        }
+    public static MetodoEstudo criar(String tipo,
+                                     Integer minutosFoco,
+                                     Integer minutosPausa) {
+        if (tipo == null || tipo.isBlank())
+            throw new IllegalArgumentException("Tipo de método não pode ser vazio.");
 
         return switch (tipo.toLowerCase().trim()) {
             case POMODORO -> new MetodoPomodoro();
             case REVISAO  -> new MetodoRevisao();
+            case POMODORO_CUSTOM -> {
+                int foco   = (minutosFoco  != null) ? minutosFoco  : 25;
+                int pausa  = (minutosPausa != null) ? minutosPausa : 5;
+                yield new MetodoPomodoroCustomizado(foco, pausa);
+            }
             default -> throw new IllegalArgumentException(
-                    "Método de estudo desconhecido: '" + tipo + "'. " +
-                    "Tipos válidos: pomodoro, revisao");
+                    "Método desconhecido: '" + tipo + "'. Válidos: pomodoro, revisao, pomodoro_custom");
         };
     }
 
-    /**
-     * Retorna os tipos disponíveis (útil para o front-end popular um select).
-     */
+    /** Atalho para métodos sem parâmetros extras (retrocompatível). */
+    public static MetodoEstudo criar(String tipo) {
+        return criar(tipo, null, null);
+    }
+
     public static String[] tiposDisponiveis() {
-        return new String[]{ POMODORO, REVISAO };
+        return new String[]{ POMODORO, REVISAO, POMODORO_CUSTOM };
     }
 }

@@ -1,153 +1,115 @@
 package br.com.estudarfatec.service;
 
 import br.com.estudarfatec.model.Tarefa;
+import br.com.estudarfatec.repository.DisciplinaRepository;
 import br.com.estudarfatec.repository.TarefaRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.Optional;
 
 /**
  * ENTREGA 4 - Regras de Negócio
- *
- * Serviço responsável pelas regras de negócio das Tarefas.
- * Valida os dados ANTES de enviar ao repositório.
- *
- * Conceitos aplicados:
- * - Separação de responsabilidades (Service cuida de lógica, Repository cuida de dados)
- * - Injeção de dependência via construtor
- * - Lançamento de exceções para erros de validação
- * - @Service: informa ao Spring que esta classe contém lógica de negócio
+ * Atualizado: validação de disciplinaId + vincular/desvincular tarefa.
  */
 @Service
 public class TarefaService {
 
-    // Injeção de dependência: o Service conhece a interface, não a implementação concreta
-    private final TarefaRepository tarefaRepository;
+    private final TarefaRepository     tarefaRepository;
+    private final DisciplinaRepository disciplinaRepository;
 
-    public TarefaService(TarefaRepository tarefaRepository) {
-        this.tarefaRepository = tarefaRepository;
+    public TarefaService(TarefaRepository tarefaRepository,
+                         DisciplinaRepository disciplinaRepository) {
+        this.tarefaRepository     = tarefaRepository;
+        this.disciplinaRepository = disciplinaRepository;
     }
 
     // -------------------------------------------------------
-    // Cadastrar — com validações (Entrega 4)
+    // CRUD básico
     // -------------------------------------------------------
 
-    /**
-     * Cadastra uma nova tarefa após validar os dados.
-     *
-     * @param tarefa objeto com os dados da nova tarefa
-     * @return tarefa salva com ID gerado
-     * @throws IllegalArgumentException se os dados forem inválidos
-     */
     public Tarefa cadastrar(Tarefa tarefa) {
         validarTarefa(tarefa);
+        validarDisciplina(tarefa.getDisciplinaId());
         return tarefaRepository.salvar(tarefa);
     }
 
-    // -------------------------------------------------------
-    // Listar
-    // -------------------------------------------------------
-
-    /**
-     * Retorna todas as tarefas cadastradas.
-     */
     public List<Tarefa> listarTodas() {
         return tarefaRepository.listarTodas();
     }
 
-    /**
-     * Busca uma tarefa pelo ID.
-     *
-     * @throws IllegalArgumentException se a tarefa não existir
-     */
+    public List<Tarefa> listarPorDisciplina(Long disciplinaId) {
+        validarDisciplina(disciplinaId);
+        return tarefaRepository.listarTodas().stream()
+                .filter(t -> disciplinaId.equals(t.getDisciplinaId()))
+                .toList();
+    }
+
     public Tarefa buscarPorId(Long id) {
         return tarefaRepository.buscarPorId(id)
                 .orElseThrow(() -> new IllegalArgumentException(
                         "Tarefa não encontrada com ID: " + id));
     }
 
-    // -------------------------------------------------------
-    // Atualizar
-    // -------------------------------------------------------
-
-    /**
-     * Atualiza os dados de uma tarefa existente.
-     *
-     * @throws IllegalArgumentException se os dados forem inválidos ou a tarefa não existir
-     */
-    public Tarefa atualizar(Long id, Tarefa tarefaAtualizada) {
-        // Verifica se existe
+    public Tarefa atualizar(Long id, Tarefa nova) {
         buscarPorId(id);
-
-        // Valida os novos dados
-        validarTarefa(tarefaAtualizada);
-
-        tarefaAtualizada.setId(id);
-        return tarefaRepository.atualizar(tarefaAtualizada)
+        validarTarefa(nova);
+        validarDisciplina(nova.getDisciplinaId());
+        nova.setId(id);
+        return tarefaRepository.atualizar(nova)
                 .orElseThrow(() -> new IllegalArgumentException(
-                        "Erro ao atualizar tarefa com ID: " + id));
+                        "Erro ao atualizar tarefa ID: " + id));
     }
 
-    // -------------------------------------------------------
-    // Concluir
-    // -------------------------------------------------------
-
-    /**
-     * Marca uma tarefa como concluída.
-     */
     public Tarefa concluir(Long id) {
-        Tarefa tarefa = buscarPorId(id);
-
-        if (tarefa.isConcluida()) {
-            throw new IllegalStateException("Tarefa já está concluída.");
-        }
-
-        tarefa.setConcluida(true);
-        return tarefaRepository.atualizar(tarefa)
-                .orElseThrow();
+        Tarefa t = buscarPorId(id);
+        if (t.isConcluida()) throw new IllegalStateException("Tarefa já está concluída.");
+        t.setConcluida(true);
+        return tarefaRepository.atualizar(t).orElseThrow();
     }
 
-    // -------------------------------------------------------
-    // Deletar
-    // -------------------------------------------------------
-
-    /**
-     * Remove uma tarefa pelo ID.
-     *
-     * @throws IllegalArgumentException se a tarefa não existir
-     */
     public void deletar(Long id) {
-        buscarPorId(id); // garante que existe antes de deletar
+        buscarPorId(id);
         tarefaRepository.deletar(id);
     }
 
     // -------------------------------------------------------
-    // Validações privadas (Entrega 4 — regras de negócio)
+    // Vincular / Desvincular disciplina
     // -------------------------------------------------------
 
-    /**
-     * Valida os dados obrigatórios de uma Tarefa.
-     * Lança exceção descritiva para cada violação encontrada.
-     */
+    /** Vincula uma tarefa a uma disciplina existente. */
+    public Tarefa vincularDisciplina(Long tarefaId, Long disciplinaId) {
+        Tarefa t = buscarPorId(tarefaId);
+        validarDisciplina(disciplinaId);          // garante que a disciplina existe
+        t.setDisciplinaId(disciplinaId);
+        return tarefaRepository.atualizar(t).orElseThrow();
+    }
+
+    /** Remove o vínculo da tarefa com qualquer disciplina. */
+    public Tarefa desvincularDisciplina(Long tarefaId) {
+        Tarefa t = buscarPorId(tarefaId);
+        t.setDisciplinaId(null);
+        return tarefaRepository.atualizar(t).orElseThrow();
+    }
+
+    // -------------------------------------------------------
+    // Validações privadas
+    // -------------------------------------------------------
+
     private void validarTarefa(Tarefa tarefa) {
-        if (tarefa == null) {
+        if (tarefa == null)
             throw new IllegalArgumentException("Tarefa não pode ser nula.");
-        }
-
-        // Título é obrigatório — regra principal da Entrega 4
-        if (tarefa.getTitulo() == null || tarefa.getTitulo().isBlank()) {
+        if (tarefa.getTitulo() == null || tarefa.getTitulo().isBlank())
             throw new IllegalArgumentException("O título da tarefa é obrigatório.");
-        }
+        if (tarefa.getTitulo().length() > 100)
+            throw new IllegalArgumentException("Título: máx. 100 caracteres.");
+        if (tarefa.getDescricao() != null && tarefa.getDescricao().length() > 500)
+            throw new IllegalArgumentException("Descrição: máx. 500 caracteres.");
+    }
 
-        if (tarefa.getTitulo().length() > 100) {
-            throw new IllegalArgumentException(
-                    "O título não pode ter mais de 100 caracteres.");
-        }
-
-        if (tarefa.getDescricao() != null && tarefa.getDescricao().length() > 500) {
-            throw new IllegalArgumentException(
-                    "A descrição não pode ter mais de 500 caracteres.");
-        }
+    private void validarDisciplina(Long disciplinaId) {
+        if (disciplinaId == null) return;   // vínculo é opcional
+        disciplinaRepository.buscarPorId(disciplinaId)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Disciplina não encontrada com ID: " + disciplinaId));
     }
 }

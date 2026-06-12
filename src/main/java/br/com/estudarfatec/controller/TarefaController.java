@@ -7,30 +7,27 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * ENTREGA 5 - Fluxo MVC
+ * Atualizado: endpoints de vínculo com disciplina +
+ *             listar tarefas filtradas por disciplina.
  *
- * Controller REST para operações de Tarefa.
- * Recebe requisições HTTP, delega ao Service e retorna respostas JSON.
- *
- * Endpoints disponíveis:
- *   POST   /api/tarefas         → cadastrar nova tarefa
- *   GET    /api/tarefas         → listar todas as tarefas
- *   GET    /api/tarefas/{id}    → buscar tarefa por ID
- *   PUT    /api/tarefas/{id}    → atualizar tarefa
- *   PATCH  /api/tarefas/{id}/concluir → marcar como concluída
- *   DELETE /api/tarefas/{id}    → deletar tarefa
- *
- * Conceitos aplicados:
- * - @RestController: combina @Controller + @ResponseBody (retorna JSON)
- * - @RequestMapping: define a rota base
- * - ResponseEntity: permite controlar o status HTTP da resposta
- * - Separação clara entre Controller (HTTP) e Service (lógica)
+ * Endpoints:
+ *   POST   /api/tarefas
+ *   GET    /api/tarefas
+ *   GET    /api/tarefas?disciplinaId={id}
+ *   GET    /api/tarefas/{id}
+ *   PUT    /api/tarefas/{id}
+ *   PATCH  /api/tarefas/{id}/concluir
+ *   PATCH  /api/tarefas/{id}/vincular          body: {"disciplinaId": 1}
+ *   DELETE /api/tarefas/{id}/vincular          → remove vínculo
+ *   DELETE /api/tarefas/{id}
  */
 @RestController
 @RequestMapping("/api/tarefas")
-@CrossOrigin(origins = "*") // Permite que o front-end se conecte a esta API
+@CrossOrigin(origins = "*")
 public class TarefaController {
 
     private final TarefaService tarefaService;
@@ -39,85 +36,52 @@ public class TarefaController {
         this.tarefaService = tarefaService;
     }
 
-    // -------------------------------------------------------
-    // POST /api/tarefas — Cadastrar
-    // -------------------------------------------------------
-
-    /**
-     * Cadastra uma nova tarefa.
-     * Retorna 201 Created com a tarefa criada.
-     */
     @PostMapping
     public ResponseEntity<Tarefa> cadastrar(@RequestBody Tarefa tarefa) {
-        Tarefa tarefaSalva = tarefaService.cadastrar(tarefa);
-        return ResponseEntity.status(HttpStatus.CREATED).body(tarefaSalva);
+        return ResponseEntity.status(HttpStatus.CREATED).body(tarefaService.cadastrar(tarefa));
     }
 
-    // -------------------------------------------------------
-    // GET /api/tarefas — Listar todas
-    // -------------------------------------------------------
-
-    /**
-     * Retorna todas as tarefas cadastradas.
-     * Retorna 200 OK com lista (pode ser vazia).
-     */
     @GetMapping
-    public ResponseEntity<List<Tarefa>> listarTodas() {
+    public ResponseEntity<List<Tarefa>> listar(
+            @RequestParam(required = false) Long disciplinaId) {
+        if (disciplinaId != null) {
+            return ResponseEntity.ok(tarefaService.listarPorDisciplina(disciplinaId));
+        }
         return ResponseEntity.ok(tarefaService.listarTodas());
     }
 
-    // -------------------------------------------------------
-    // GET /api/tarefas/{id} — Buscar por ID
-    // -------------------------------------------------------
-
-    /**
-     * Busca uma tarefa pelo ID.
-     * Retorna 200 OK ou 404 Not Found.
-     */
     @GetMapping("/{id}")
     public ResponseEntity<Tarefa> buscarPorId(@PathVariable Long id) {
-        Tarefa tarefa = tarefaService.buscarPorId(id);
-        return ResponseEntity.ok(tarefa);
+        return ResponseEntity.ok(tarefaService.buscarPorId(id));
     }
 
-    // -------------------------------------------------------
-    // PUT /api/tarefas/{id} — Atualizar
-    // -------------------------------------------------------
-
-    /**
-     * Atualiza os dados de uma tarefa existente.
-     * Retorna 200 OK com a tarefa atualizada.
-     */
     @PutMapping("/{id}")
-    public ResponseEntity<Tarefa> atualizar(
-            @PathVariable Long id,
-            @RequestBody Tarefa tarefa) {
-        Tarefa tarefaAtualizada = tarefaService.atualizar(id, tarefa);
-        return ResponseEntity.ok(tarefaAtualizada);
+    public ResponseEntity<Tarefa> atualizar(@PathVariable Long id,
+                                             @RequestBody Tarefa tarefa) {
+        return ResponseEntity.ok(tarefaService.atualizar(id, tarefa));
     }
 
-    // -------------------------------------------------------
-    // PATCH /api/tarefas/{id}/concluir — Marcar como concluída
-    // -------------------------------------------------------
-
-    /**
-     * Marca uma tarefa como concluída.
-     * Retorna 200 OK com a tarefa atualizada.
-     */
     @PatchMapping("/{id}/concluir")
     public ResponseEntity<Tarefa> concluir(@PathVariable Long id) {
-        Tarefa tarefa = tarefaService.concluir(id);
-        return ResponseEntity.ok(tarefa);
+        return ResponseEntity.ok(tarefaService.concluir(id));
     }
 
-    // -------------------------------------------------------
-    // DELETE /api/tarefas/{id} — Deletar
-    // -------------------------------------------------------
+    /** Vincula a tarefa a uma disciplina. Corpo: {"disciplinaId": 2} */
+    @PatchMapping("/{id}/vincular")
+    public ResponseEntity<Tarefa> vincular(@PathVariable Long id,
+                                            @RequestBody Map<String, Long> body) {
+        Long disciplinaId = body.get("disciplinaId");
+        if (disciplinaId == null)
+            throw new IllegalArgumentException("Campo 'disciplinaId' é obrigatório.");
+        return ResponseEntity.ok(tarefaService.vincularDisciplina(id, disciplinaId));
+    }
 
-    /**
-     * Remove uma tarefa pelo ID.
-     * Retorna 204 No Content após exclusão.
-     */
+    /** Remove o vínculo da tarefa com disciplina. */
+    @DeleteMapping("/{id}/vincular")
+    public ResponseEntity<Tarefa> desvincular(@PathVariable Long id) {
+        return ResponseEntity.ok(tarefaService.desvincularDisciplina(id));
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deletar(@PathVariable Long id) {
         tarefaService.deletar(id);

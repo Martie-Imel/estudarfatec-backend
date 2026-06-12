@@ -2,67 +2,69 @@ package br.com.estudarfatec.controller;
 
 import br.com.estudarfatec.patterns.factory.MetodoEstudoFactory;
 import br.com.estudarfatec.patterns.strategy.MetodoEstudo;
+import br.com.estudarfatec.patterns.strategy.MetodoPomodoroCustomizado;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
 /**
- * ENTREGA 6 e 7 - Strategy + Factory via REST
+ * ENTREGA 6+7 - Strategy + Factory via REST
+ * Atualizado: suporte a pomodoro_custom com minutosFoco e minutosPausa.
  *
- * Controller que expõe o sistema de métodos de estudo como API.
- * Usa a Factory para instanciar o método sem "new" direto aqui.
- *
- * Endpoints:
- *   GET  /api/metodos-estudo               → lista métodos disponíveis
- *   POST /api/metodos-estudo/iniciar        → inicia uma sessão de estudo
+ * POST /api/metodos-estudo/iniciar
+ * Body padrão:        { "metodo": "pomodoro",       "assunto": "POO" }
+ * Body customizado:   { "metodo": "pomodoro_custom", "assunto": "POO",
+ *                       "minutosFoco": 45, "minutosPausa": 10 }
  */
 @RestController
 @RequestMapping("/api/metodos-estudo")
 @CrossOrigin(origins = "*")
 public class EstudoController {
 
-    /**
-     * Lista todos os tipos de método disponíveis.
-     * Útil para o front-end popular um <select> ou lista de opções.
-     */
     @GetMapping
     public ResponseEntity<String[]> listarMetodos() {
         return ResponseEntity.ok(MetodoEstudoFactory.tiposDisponiveis());
     }
 
-    /**
-     * Inicia uma sessão de estudo com o método e assunto informados.
-     *
-     * Corpo esperado (JSON):
-     * {
-     *   "metodo": "pomodoro",
-     *   "assunto": "Padrões de Projeto"
-     * }
-     */
     @PostMapping("/iniciar")
     public ResponseEntity<Map<String, Object>> iniciarSessao(
-            @RequestBody Map<String, String> body) {
+            @RequestBody Map<String, Object> body) {
 
-        String metodo  = body.get("metodo");
-        String assunto = body.get("assunto");
+        String  metodo      = (String) body.get("metodo");
+        String  assunto     = (String) body.get("assunto");
+        Integer minutosFoco  = body.get("minutosFoco")  != null
+                ? ((Number) body.get("minutosFoco")).intValue()  : null;
+        Integer minutosPausa = body.get("minutosPausa") != null
+                ? ((Number) body.get("minutosPausa")).intValue() : null;
 
-        if (assunto == null || assunto.isBlank()) {
+        if (assunto == null || assunto.isBlank())
             return ResponseEntity.badRequest()
                     .body(Map.of("erro", "O campo 'assunto' é obrigatório."));
-        }
 
-        // Factory cria a estratégia correta — sem "new" direto no Controller (Entrega 7)
-        MetodoEstudo estrategia = MetodoEstudoFactory.criar(metodo);
-
-        // Strategy executa o comportamento de estudo (Entrega 6)
+        MetodoEstudo estrategia =
+                MetodoEstudoFactory.criar(metodo, minutosFoco, minutosPausa);
         String resultado = estrategia.estudar(assunto);
 
+        // Monta resposta enriquecida para pomodoro customizado
+        if (estrategia instanceof MetodoPomodoroCustomizado custom) {
+            return ResponseEntity.ok(Map.of(
+                    "metodo",        estrategia.getNome(),
+                    "assunto",       assunto,
+                    "duracaoFoco",   custom.getMinutosFoco()  + " minutos",
+                    "duracaoPausa",  custom.getMinutosPausa() + " minutos",
+                    "duracao",       custom.getDuracaoMinutos() + " minutos",
+                    "instrucoes",    resultado,
+                    "customizado",   true
+            ));
+        }
+
         return ResponseEntity.ok(Map.of(
-                "metodo",    estrategia.getNome(),
-                "assunto",   assunto,
-                "duracao",   estrategia.getDuracaoMinutos() + " minutos",
-                "instrucoes", resultado
+                "metodo",      estrategia.getNome(),
+                "assunto",     assunto,
+                "duracao",     estrategia.getDuracaoMinutos() + " minutos",
+                "instrucoes",  resultado,
+                "customizado", false
         ));
     }
 }

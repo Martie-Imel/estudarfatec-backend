@@ -2,109 +2,53 @@ package br.com.estudarfatec.model;
 
 /**
  * ENTREGA 1 - Fundamentos de POO
- *
- * Classe que representa uma Tarefa no sistema.
- * Demonstra encapsulamento com atributos privados e acesso via getters/setters.
- *
- * Conceitos aplicados:
- * - Encapsulamento (atributos private)
- * - Construtores sobrecarregados
- * - Getters e Setters
- * - toString() para representação do objeto
+ * Atualizado: suporte a vínculo com Disciplina (disciplinaId).
  */
 public class Tarefa {
 
-    // Atributos privados — encapsulamento (Entrega 1)
-    private Long id;
-    private String titulo;
-    private String descricao;
+    private Long    id;
+    private String  titulo;
+    private String  descricao;
     private boolean concluida;
 
-    // -------------------------------------------------------
-    // Construtores
-    // -------------------------------------------------------
+    /** ID da disciplina vinculada. null = sem vínculo. */
+    private Long disciplinaId;
 
-    /** Construtor padrão (necessário para frameworks como Spring) */
-    public Tarefa() {
-    }
+    public Tarefa() {}
 
-    /** Construtor completo usado ao criar uma nova tarefa */
     public Tarefa(Long id, String titulo, String descricao) {
-        this.id = id;
-        this.titulo = titulo;
+        this.id        = id;
+        this.titulo    = titulo;
         this.descricao = descricao;
         this.concluida = false;
     }
 
-    // -------------------------------------------------------
-    // Getters e Setters
-    // -------------------------------------------------------
-
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public String getTitulo() {
-        return titulo;
-    }
-
-    public void setTitulo(String titulo) {
-        this.titulo = titulo;
-    }
-
-    public String getDescricao() {
-        return descricao;
-    }
-
-    public void setDescricao(String descricao) {
-        this.descricao = descricao;
-    }
-
-    public boolean isConcluida() {
-        return concluida;
-    }
-
-    public void setConcluida(boolean concluida) {
-        this.concluida = concluida;
-    }
-
-    // -------------------------------------------------------
-    // toString — útil para debug e exibição no console (Entrega 1)
-    // -------------------------------------------------------
+    public Long    getId()                      { return id; }
+    public void    setId(Long id)               { this.id = id; }
+    public String  getTitulo()                  { return titulo; }
+    public void    setTitulo(String titulo)     { this.titulo = titulo; }
+    public String  getDescricao()               { return descricao; }
+    public void    setDescricao(String d)       { this.descricao = d; }
+    public boolean isConcluida()                { return concluida; }
+    public void    setConcluida(boolean c)      { this.concluida = c; }
+    public Long    getDisciplinaId()            { return disciplinaId; }
+    public void    setDisciplinaId(Long dId)    { this.disciplinaId = dId; }
 
     @Override
     public String toString() {
-        return "Tarefa{" +
-                "id=" + id +
-                ", titulo='" + titulo + '\'' +
-                ", descricao='" + descricao + '\'' +
-                ", concluida=" + concluida +
-                '}';
+        return "Tarefa{id=" + id + ", titulo='" + titulo + "', concluida=" + concluida
+               + ", disciplinaId=" + disciplinaId + '}';
     }
 
-    // -------------------------------------------------------
-    // Método main — instancia e imprime objetos (Entrega 1)
-    // -------------------------------------------------------
-
-    /**
-     * Demonstração do Entrega 1: instanciando e imprimindo Tarefas no console.
-     * Execute este main para ver os objetos sendo criados.
-     */
     public static void main(String[] args) {
-        Tarefa tarefa1 = new Tarefa(1L, "Estudar POO", "Revisar encapsulamento e herança");
-        Tarefa tarefa2 = new Tarefa(2L, "Fazer exercícios", "Resolver lista de arrays");
-
+        Tarefa t1 = new Tarefa(1L, "Estudar POO", "Revisar encapsulamento");
+        Tarefa t2 = new Tarefa(2L, "Fazer exercícios", "Resolver lista de arrays");
+        t1.setDisciplinaId(10L);
         System.out.println("=== ENTREGA 1 - Fundamentos POO ===");
-        System.out.println(tarefa1);
-        System.out.println(tarefa2);
-
-        // Demonstrando uso dos setters
-        tarefa1.setConcluida(true);
-        System.out.println("\nApós marcar tarefa 1 como concluída:");
-        System.out.println(tarefa1);
+        System.out.println(t1);
+        System.out.println(t2);
+        t1.setConcluida(true);
+        System.out.println("\nApós concluir tarefa 1:");
+        System.out.println(t1);
     }
 }

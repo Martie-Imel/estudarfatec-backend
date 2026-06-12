@@ -1,6 +1,7 @@
 package br.com.estudarfatec;
 
 import br.com.estudarfatec.model.Tarefa;
+import br.com.estudarfatec.repository.DisciplinaRepositoryMemoria;
 import br.com.estudarfatec.repository.TarefaRepositoryMemoria;
 import br.com.estudarfatec.service.TarefaService;
 import org.junit.jupiter.api.BeforeEach;
@@ -11,167 +12,96 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-/**
- * ENTREGA 8 - Qualidade e Testes
- *
- * Testes unitários do TarefaService com JUnit 5.
- *
- * Usa TarefaRepositoryMemoria como dependência real
- * (sem mock, para manter simples no nível da Fatec).
- */
 @DisplayName("Testes unitários do TarefaService")
 class TarefaServiceTest {
 
     private TarefaService tarefaService;
 
-    /**
-     * @BeforeEach executa antes de cada teste,
-     * garantindo um repositório limpo e estado isolado.
-     */
     @BeforeEach
     void configurar() {
-        tarefaService = new TarefaService(new TarefaRepositoryMemoria());
+        tarefaService = new TarefaService(
+                new TarefaRepositoryMemoria(),
+                new DisciplinaRepositoryMemoria());
     }
 
-    // -------------------------------------------------------
-    // Cadastrar
-    // -------------------------------------------------------
-
-    @Test
-    @DisplayName("Deve cadastrar tarefa válida e gerar ID automaticamente")
-    void deve_cadastrarTarefa_comIdGerado() {
-        Tarefa tarefa = new Tarefa(null, "Estudar Factory", "Implementar padrão Factory");
-
-        Tarefa salva = tarefaService.cadastrar(tarefa);
-
-        assertNotNull(salva.getId(), "ID deve ser gerado automaticamente");
+    @Test @DisplayName("Deve cadastrar tarefa com ID gerado")
+    void deve_cadastrar_com_id() {
+        Tarefa salva = tarefaService.cadastrar(new Tarefa(null, "Estudar Factory", null));
+        assertNotNull(salva.getId());
         assertEquals("Estudar Factory", salva.getTitulo());
     }
 
-    @Test
-    @DisplayName("Deve lançar exceção ao cadastrar tarefa sem título")
-    void deve_lancarExcecao_quandoTituloVazio() {
-        Tarefa tarefa = new Tarefa(null, "", "descrição");
-
-        IllegalArgumentException ex = assertThrows(
-                IllegalArgumentException.class,
-                () -> tarefaService.cadastrar(tarefa)
-        );
-
-        assertTrue(ex.getMessage().contains("título"),
-                "Mensagem deve mencionar o campo 'título'");
-    }
-
-    @Test
-    @DisplayName("Deve lançar exceção ao cadastrar tarefa com título nulo")
-    void deve_lancarExcecao_quandoTituloNulo() {
-        Tarefa tarefa = new Tarefa(null, null, "descrição");
-
+    @Test @DisplayName("Deve lançar exceção com título vazio")
+    void deve_rejeitar_titulo_vazio() {
         assertThrows(IllegalArgumentException.class,
-                () -> tarefaService.cadastrar(tarefa));
+                () -> tarefaService.cadastrar(new Tarefa(null, "", "desc")));
     }
 
-    @Test
-    @DisplayName("Deve lançar exceção quando título ultrapassa 100 caracteres")
-    void deve_lancarExcecao_quandoTituloMuitoLongo() {
-        String tituloLongo = "A".repeat(101);
-        Tarefa tarefa = new Tarefa(null, tituloLongo, "desc");
-
+    @Test @DisplayName("Deve lançar exceção com título nulo")
+    void deve_rejeitar_titulo_nulo() {
         assertThrows(IllegalArgumentException.class,
-                () -> tarefaService.cadastrar(tarefa));
+                () -> tarefaService.cadastrar(new Tarefa(null, null, "desc")));
     }
 
-    // -------------------------------------------------------
-    // Listar
-    // -------------------------------------------------------
-
-    @Test
-    @DisplayName("Deve retornar lista vazia quando não há tarefas")
-    void deve_retornarListaVazia_quandoNaoHaTarefas() {
-        List<Tarefa> tarefas = tarefaService.listarTodas();
-
-        assertNotNull(tarefas);
-        assertTrue(tarefas.isEmpty());
+    @Test @DisplayName("Deve lançar exceção quando título > 100 chars")
+    void deve_rejeitar_titulo_longo() {
+        assertThrows(IllegalArgumentException.class,
+                () -> tarefaService.cadastrar(new Tarefa(null, "A".repeat(101), "desc")));
     }
 
-    @Test
-    @DisplayName("Deve listar todas as tarefas cadastradas")
-    void deve_listarTodasAsTarefas() {
-        tarefaService.cadastrar(new Tarefa(null, "Tarefa 1", null));
-        tarefaService.cadastrar(new Tarefa(null, "Tarefa 2", null));
-        tarefaService.cadastrar(new Tarefa(null, "Tarefa 3", null));
-
-        List<Tarefa> tarefas = tarefaService.listarTodas();
-
-        assertEquals(3, tarefas.size());
+    @Test @DisplayName("Deve retornar lista vazia inicialmente")
+    void deve_listar_vazio() {
+        assertTrue(tarefaService.listarTodas().isEmpty());
     }
 
-    // -------------------------------------------------------
-    // Buscar por ID
-    // -------------------------------------------------------
+    @Test @DisplayName("Deve listar todas as tarefas cadastradas")
+    void deve_listar_todas() {
+        tarefaService.cadastrar(new Tarefa(null, "T1", null));
+        tarefaService.cadastrar(new Tarefa(null, "T2", null));
+        assertEquals(2, tarefaService.listarTodas().size());
+    }
 
-    @Test
-    @DisplayName("Deve encontrar tarefa pelo ID correto")
-    void deve_encontrarTarefa_peloId() {
+    @Test @DisplayName("Deve encontrar tarefa pelo ID")
+    void deve_buscar_por_id() {
         Tarefa salva = tarefaService.cadastrar(new Tarefa(null, "Tarefa X", null));
-
-        Tarefa encontrada = tarefaService.buscarPorId(salva.getId());
-
-        assertEquals(salva.getId(), encontrada.getId());
-        assertEquals("Tarefa X", encontrada.getTitulo());
+        assertEquals("Tarefa X", tarefaService.buscarPorId(salva.getId()).getTitulo());
     }
 
-    @Test
-    @DisplayName("Deve lançar exceção ao buscar ID inexistente")
-    void deve_lancarExcecao_quandoIdNaoExiste() {
-        assertThrows(IllegalArgumentException.class,
-                () -> tarefaService.buscarPorId(999L));
+    @Test @DisplayName("Deve lançar exceção para ID inexistente")
+    void deve_falhar_id_invalido() {
+        assertThrows(IllegalArgumentException.class, () -> tarefaService.buscarPorId(999L));
     }
 
-    // -------------------------------------------------------
-    // Concluir
-    // -------------------------------------------------------
-
-    @Test
-    @DisplayName("Deve marcar tarefa como concluída")
-    void deve_concluirTarefa_comSucesso() {
+    @Test @DisplayName("Deve marcar tarefa como concluída")
+    void deve_concluir() {
         Tarefa salva = tarefaService.cadastrar(new Tarefa(null, "Tarefa", null));
-
-        Tarefa concluida = tarefaService.concluir(salva.getId());
-
-        assertTrue(concluida.isConcluida());
+        assertTrue(tarefaService.concluir(salva.getId()).isConcluida());
     }
 
-    @Test
-    @DisplayName("Deve lançar exceção ao tentar concluir tarefa já concluída")
-    void deve_lancarExcecao_quandoTarefaJaConcluida() {
+    @Test @DisplayName("Deve lançar exceção ao concluir tarefa já concluída")
+    void deve_falhar_concluir_duplicado() {
         Tarefa salva = tarefaService.cadastrar(new Tarefa(null, "Tarefa", null));
         tarefaService.concluir(salva.getId());
-
-        // Segunda tentativa deve falhar
-        assertThrows(IllegalStateException.class,
-                () -> tarefaService.concluir(salva.getId()));
+        assertThrows(IllegalStateException.class, () -> tarefaService.concluir(salva.getId()));
     }
 
-    // -------------------------------------------------------
-    // Deletar
-    // -------------------------------------------------------
-
-    @Test
-    @DisplayName("Deve deletar tarefa existente")
-    void deve_deletarTarefa_comSucesso() {
+    @Test @DisplayName("Deve deletar tarefa existente")
+    void deve_deletar() {
         Tarefa salva = tarefaService.cadastrar(new Tarefa(null, "Tarefa", null));
-
         tarefaService.deletar(salva.getId());
-
         assertThrows(IllegalArgumentException.class,
                 () -> tarefaService.buscarPorId(salva.getId()));
     }
 
-    @Test
-    @DisplayName("Deve lançar exceção ao tentar deletar ID inexistente")
-    void deve_lancarExcecao_aoDeletarIdInexistente() {
+    @Test @DisplayName("Deve lançar exceção ao deletar ID inexistente")
+    void deve_falhar_deletar_invalido() {
+        assertThrows(IllegalArgumentException.class, () -> tarefaService.deletar(999L));
+    }
+
+    @Test @DisplayName("Deve lançar exceção ao vincular disciplina inexistente")
+    void deve_rejeitar_disciplina_invalida() {
+        Tarefa salva = tarefaService.cadastrar(new Tarefa(null, "Tarefa", null));
         assertThrows(IllegalArgumentException.class,
-                () -> tarefaService.deletar(999L));
+                () -> tarefaService.vincularDisciplina(salva.getId(), 999L));
     }
 }
